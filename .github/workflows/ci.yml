@@ -1,0 +1,23 @@
+name: Task App CI
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  check-app:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get the repository code
+        uses: actions/checkout@v4
+
+      - name: Check required application files
+        run: |
+          test -f server.js
+          test -f package.json
+          test -f package-lock.json
+          test -f index.html
+          echo "All required application files are present."
