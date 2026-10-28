@@ -1,0 +1,390 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow | Task Manager</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, Arial, sans-serif;
+      background: #f4f6fb;
+      color: #182230;
+    }
+
+    header {
+      background: #172554;
+      color: white;
+      padding: 24px;
+    }
+
+    .header-inner, main {
+      max-width: 850px;
+      margin: auto;
+    }
+
+    header h1 { margin: 0 0 6px; font-size: 27px; }
+    header p { margin: 0; color: #c7d2fe; }
+
+    main { padding: 30px 20px; }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 22px;
+      color: #526174;
+      font-size: 14px;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+
+    .dot.online { background: #16a34a; }
+    .dot.offline { background: #dc2626; }
+
+    .card {
+      background: white;
+      border: 1px solid #e3e8f0;
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 22px;
+      box-shadow: 0 4px 15px #17255408;
+    }
+
+    h2 { font-size: 18px; margin: 0 0 18px; }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 7px;
+    }
+
+    input, textarea {
+      display: block;
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 15px;
+      font: inherit;
+      background: white;
+    }
+
+    textarea { min-height: 85px; resize: vertical; }
+
+    input:focus, textarea:focus {
+      outline: 2px solid #a5b4fc;
+      border-color: #6366f1;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: .6; cursor: wait; }
+
+    .primary { background: #4f46e5; color: white; }
+    .primary:hover { background: #4338ca; }
+
+    .task-list { display: grid; gap: 12px; }
+
+    .task {
+      border: 1px solid #e3e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .task-info { flex: 1; min-width: 0; }
+    .task h3 { margin: 0 0 6px; font-size: 16px; overflow-wrap: anywhere; }
+    .task p { margin: 0 0 9px; color: #64748b; font-size: 14px; overflow-wrap: anywhere; }
+    .task small { color: #94a3b8; }
+
+    .task.completed h3 {
+      text-decoration: line-through;
+      color: #94a3b8;
+    }
+
+    .task-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+
+    .secondary { background: #e0e7ff; color: #3730a3; }
+    .danger { background: #fee2e2; color: #b91c1c; }
+
+    .empty, .message { color: #64748b; font-size: 14px; }
+    .message { margin: 12px 0 0; }
+    .error { color: #b91c1c; }
+    .success { color: #15803d; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .stat {
+      background: white;
+      border: 1px solid #e3e8f0;
+      padding: 16px;
+      border-radius: 12px;
+    }
+
+    .stat strong { display: block; font-size: 25px; }
+    .stat span { color: #64748b; font-size: 13px; }
+
+    @media (max-width: 540px) {
+      main { padding: 22px 14px; }
+      .card { padding: 17px; }
+      .task { flex-direction: column; }
+      .stats { gap: 7px; }
+      .stat { padding: 12px; }
+      .stat strong { font-size: 21px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>TaskFlow</h1>
+      <p>Your tasks, organised in one place.</p>
+    </div>
+  </header>
+
+  <main>
+    <div class="status">
+      <span class="dot" id="statusDot"></span>
+      <span id="connectionStatus">Checking backend connection...</span>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <strong id="totalCount">0</strong>
+        <span>Total tasks</span>
+      </div>
+      <div class="stat">
+        <strong id="pendingCount">0</strong>
+        <span>Pending</span>
+      </div>
+      <div class="stat">
+        <strong id="completedCount">0</strong>
+        <span>Completed</span>
+      </div>
+    </div>
+
+    <section class="card">
+      <h2>Add a new task</h2>
+      <form id="taskForm">
+        <label for="title">Task title</label>
+        <input id="title" name="title" maxlength="200"
+               placeholder="e.g. Deploy my application" required>
+
+        <label for="description">Description (optional)</label>
+        <textarea id="description" name="description"
+                  placeholder="What needs to be done?"></textarea>
+
+        <button class="primary" id="addButton" type="submit">
+          + Add task
+        </button>
+        <p class="message" id="formMessage" role="status"></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Your tasks</h2>
+      <div class="task-list" id="taskList">
+        <p class="empty">Loading tasks...</p>
+      </div>
+      <p class="message" id="listMessage" role="status"></p>
+    </section>
+  </main>
+
+  <script>
+    const API = '/api';
+    const taskList = document.getElementById('taskList');
+    const taskForm = document.getElementById('taskForm');
+    const formMessage = document.getElementById('formMessage');
+    const listMessage = document.getElementById('listMessage');
+    const addButton = document.getElementById('addButton');
+
+    let tasks = [];
+
+    async function apiRequest(path, options = {}) {
+      const response = await fetch(API + path, {
+        ...options,
+        headers: {
+          ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+          ...options.headers
+        }
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || `Request failed (${response.status})`);
+      }
+
+      return response.status === 204 ? null : response.json();
+    }
+
+    function setConnection(online) {
+      document.getElementById('statusDot').className =
+        'dot ' + (online ? 'online' : 'offline');
+      document.getElementById('connectionStatus').textContent =
+        online ? 'Backend connected' : 'Backend unavailable';
+    }
+
+    function updateStats() {
+      document.getElementById('totalCount').textContent = tasks.length;
+      document.getElementById('pendingCount').textContent =
+        tasks.filter(task => !task.completed).length;
+      document.getElementById('completedCount').textContent =
+        tasks.filter(task => task.completed).length;
+    }
+
+    function renderTasks() {
+      updateStats();
+      taskList.replaceChildren();
+
+      if (!tasks.length) {
+        const empty = document.createElement('p');
+        empty.className = 'empty';
+        empty.textContent = 'No tasks yet. Add your first task above!';
+        taskList.appendChild(empty);
+        return;
+      }
+
+      tasks.forEach(task => {
+        const item = document.createElement('article');
+        item.className = 'task' + (task.completed ? ' completed' : '');
+
+        const info = document.createElement('div');
+        info.className = 'task-info';
+
+        const title = document.createElement('h3');
+        title.textContent = task.title;
+        info.appendChild(title);
+
+        if (task.description) {
+          const description = document.createElement('p');
+          description.textContent = task.description;
+          info.appendChild(description);
+        }
+
+        const date = document.createElement('small');
+        date.textContent = 'Created ' +
+          new Date(task.created_at).toLocaleString();
+        info.appendChild(date);
+
+        const actions = document.createElement('div');
+        actions.className = 'task-actions';
+
+        const toggle = document.createElement('button');
+        toggle.className = 'secondary';
+        toggle.textContent = task.completed ? 'Undo' : 'Complete';
+        toggle.addEventListener('click', () => toggleTask(task));
+        actions.appendChild(toggle);
+
+        const remove = document.createElement('button');
+        remove.className = 'danger';
+        remove.textContent = 'Delete';
+        remove.addEventListener('click', () => deleteTask(task));
+        actions.appendChild(remove);
+
+        item.append(info, actions);
+        taskList.appendChild(item);
+      });
+    }
+
+    async function loadTasks() {
+      try {
+        tasks = await apiRequest('/tasks');
+        setConnection(true);
+        listMessage.textContent = '';
+        listMessage.className = 'message';
+        renderTasks();
+      } catch (error) {
+        setConnection(false);
+        listMessage.textContent = 'Could not load tasks: ' + error.message;
+        listMessage.className = 'message error';
+        taskList.replaceChildren();
+        const empty = document.createElement('p');
+        empty.className = 'empty';
+        empty.textContent = 'Check that the backend and database are running.';
+        taskList.appendChild(empty);
+      }
+    }
+
+    taskForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      addButton.disabled = true;
+      formMessage.textContent = 'Saving task...';
+      formMessage.className = 'message';
+
+      try {
+        const title = document.getElementById('title').value.trim();
+        const description =
+          document.getElementById('description').value.trim();
+
+        await apiRequest('/tasks', {
+          method: 'POST',
+          body: JSON.stringify({ title, description })
+        });
+
+        taskForm.reset();
+        formMessage.textContent = 'Task saved successfully.';
+        formMessage.className = 'message success';
+        await loadTasks();
+      } catch (error) {
+        formMessage.textContent = error.message;
+        formMessage.className = 'message error';
+      } finally {
+        addButton.disabled = false;
+      }
+    });
+
+    async function toggleTask(task) {
+      listMessage.textContent = '';
+      try {
+        await apiRequest('/tasks/' + task.id, {
+          method: 'PATCH',
+          body: JSON.stringify({ completed: !task.completed })
+        });
+        await loadTasks();
+      } catch (error) {
+        listMessage.textContent = 'Could not update task: ' + error.message;
+        listMessage.className = 'message error';
+      }
+    }
+
+    async function deleteTask(task) {
+      if (!confirm('Delete "' + task.title + '"?')) return;
+
+      listMessage.textContent = '';
+      try {
+        await apiRequest('/tasks/' + task.id, { method: 'DELETE' });
+        await loadTasks();
+      } catch (error) {
+        listMessage.textContent = 'Could not delete task: ' + error.message;
+        listMessage.className = 'message error';
+      }
+    }
+
+    loadTasks();
+  </script>
+</body>
+</html>
