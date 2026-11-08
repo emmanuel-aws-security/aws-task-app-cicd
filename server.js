@@ -1,5 +1,7 @@
 
-require('dotenv').config();
+require('dotenv').config({
+  path: '/home/ubuntu/task-app/.env'
+});
 
 const express = require('express');
 const { Pool } = require('pg');
